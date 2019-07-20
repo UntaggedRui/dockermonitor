@@ -11,7 +11,7 @@
 <div id="tx_bytes">Placeholder for tx_bytes</div>
 <script>
     var chart_cpu = null, chart_mem = null, net_in = null, net_out = null;
-    var container_namelist = ["cadvisor", "influxdb"];
+    var container_namelist = [ "influxdb"];
     angular.module('myModule', [])
         .controller('myController', function ($scope, $http) {
             chart_cpu = Highcharts.chart('cpugraph',
@@ -21,7 +21,7 @@
                         type: 'spline',
                         zoomType: 'x',
                         events: {
-                            load: requestData('chart_cpu', 'cpu', container_namelist) // 图表加载完毕后执行的回调函数
+                            //load: requestData('chart_cpu', 'cpu', container_namelist) // 图表加载完毕后执行的回调函数
                         }
                     },
                     title: {
@@ -52,7 +52,7 @@
                         type: 'spline',
                         zoomType: 'x',
                         events: {
-                            load: requestData('chart_mem', 'memory_usage',container_namelist) // 图表加载完毕后执行的回调函数
+                            //load: requestData('chart_mem', 'memory_usage',container_namelist) // 图表加载完毕后执行的回调函数
                         }
                     },
                     title: {
@@ -76,14 +76,14 @@
                     },
                 }
             );
-           {% comment %} net_in = Highcharts.chart('rx_bytes',
+            net_in = Highcharts.chart('rx_bytes',
                 {
 
                     chart: {
                         type: 'spline',
                         zoomType: 'x',
                         events: {
-                            load: requestData('net_in', 'rx_bytes',container_namelist) // 图表加载完毕后执行的回调函数
+                            //load: requestData('net_in', 'rx_bytes',container_namelist) // 图表加载完毕后执行的回调函数
                         }
                     },
                     title: {
@@ -114,7 +114,7 @@
                         type: 'spline',
                         zoomType: 'x',
                         events: {
-                            load: requestData('net_out', 'tx_bytes',container_namelist) // 图表加载完毕后执行的回调函数
+                            load: requestData(container_namelist) // 图表加载完毕后执行的回调函数
                         }
                     },
                     title: {
@@ -137,7 +137,7 @@
                         enabled: false // 禁用版权信息
                     },
                 }
-            );{% endcomment %}
+            );
 
             function sleep(numberMillis) {
                 var now = new Date();
@@ -149,86 +149,96 @@
                 }
             }
 
-            function requestData(chart_name, infotype, container_namelist) {
+            function requestData(container_namelist) {
                 $http({
                     url: 'getdata/',
                     method: 'POST',
                     data: {
                         'firsttime': 'true',
-                        'infotype': infotype,
                         'container_namelist': container_namelist
                     }
                 }).success(function (response, status, headers, config) {
-                    var index = 0;
-                    for (var container_name in response) {
-                        if (chart_name === "chart_cpu") {
-                                chart_cpu.addSeries({
+                    var  whichchart = null;
+                    for (var datatype in response)
+                    {
+                        if(datatype==="tx_bytes"){
+                            whichchart = net_out;
+                        }else if(datatype==="rx_bytes"){
+                            whichchart = net_in;
+                        }else if(datatype==="memory_usage"){
+                            whichchart = chart_mem;
+                        }else if(datatype==="cpudata"){
+                            whichchart = chart_cpu;
+                        }
+                        var index = 0;
+                        for (var container_name in response[datatype]) {
+                            whichchart.addSeries({
                             name: container_name,
                             data:[]
                         });
-                            } else if (chart_name === "chart_mem") {
-                                chart_mem.addSeries({
-                            name: container_name,
-                            data:[]
-                        });
-                            }
-
-                        var container_data = response[container_name];
+                            var container_data = response[datatype][container_name];
                         for (var i = 0; i < container_data.length; i++) {
                             var x = Date.parse(container_data[i].time);
                             x = x + 28800000;
                             var y = parseFloat(container_data[i].value);
-                            if (chart_name === "chart_cpu") {
-                                chart_cpu.series[index].addPoint([x, y], false, false);
-                            } else if (chart_name === "chart_mem") {
-                                chart_mem.series[index].addPoint([x, y], false, false);
-                            }
+                            whichchart.series[index].addPoint([x, y], false, false);
                         }
 
                         index = index + 1;
-                    }
-                    if (chart_name === "chart_cpu") {
-                        chart_cpu.redraw();
-                    } else if (chart_name === "chart_mem") {
-                        chart_mem.redraw();
-                    }
 
-                    setTimeout(updatedata, 1500, chart_name, infotype, container_namelist);
+                        }
+
+                    whichchart.redraw();
+                    }
+                    setTimeout(updatedata, 1500, container_namelist);
 
 
                 })
             }
 
-            function updatedata(chart_name, infotype, container_namelist) {
+            function updatedata(container_namelist) {
                 $http({
                     url: 'getdata/',
                     method: 'POST',
                     data: {
                         'firsttime': 'false',
-                        'infotype': infotype,
                         'container_namelist': container_namelist
                     }
                 }).success(function (response, status, headers, config) {
-                    var index = 0;
-                    for (var container_name in response) {
-                        var container_data = response[container_name];
-                        var x = Date.parse(container_data.time);
-                        x = x + 28800000;
-                        var y = parseFloat(container_data.value);
-                        if (chart_name === "chart_cpu") {
-                            chart_cpu.series[index].addPoint([x, y], false, true);
-                        } else if (chart_name === "chart_mem") {
-                            chart_mem.series[index].addPoint([x, y], false, true);
+                    var  whichchart = null;
+                    console.log(response);
+                    for (var datatype in response)
+                    {
+                        if(datatype==="tx_bytes"){
+                            whichchart = net_out;
+                        }else if(datatype==="rx_bytes"){
+                            whichchart = net_in;
+                        }else if(datatype==="memory_usage"){
+                            whichchart = chart_mem;
+                        }else if(datatype==="cpudata"){
+                            whichchart = chart_cpu;
                         }
+                        var index = 0;
+                        for (var container_name in response[datatype]) {
+
+                            var container_data = response[datatype][container_name];
+                            var x = Date.parse(container_data.time);
+                            x = x + 28800000;
+                            var y = parseFloat(container_data.value);
+                            whichchart.series[index].addPoint([x, y], false, true);
+
                         index = index + 1;
-                    }
-                    if (chart_name === "chart_cpu") {
-                        chart_cpu.redraw();
-                    } else if (chart_name === "chart_mem") {
-                        chart_mem.redraw();
+
+                        }
+
+                    whichchart.redraw();
                     }
 
-                    setTimeout(updatedata, 1500, chart_name, infotype, container_namelist);
+
+
+
+
+                    setTimeout(updatedata, 1500,  container_namelist);
 
 
                 }).error(function (result) {
