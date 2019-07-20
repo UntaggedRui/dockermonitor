@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html ng-app="myModule">
 <head>
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
-    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="../static/angular.min.js"></script>
+    <script src="../static/highcharts.js"></script>
 </head>
 <body ng-controller="myController">
 <div id="cpugraph">Placeholder for cpugraph</div>
@@ -11,7 +11,7 @@
 <div id="tx_bytes">Placeholder for tx_bytes</div>
 <script>
     var chart_cpu = null, chart_mem = null, net_in = null, net_out = null;
-    var container_namelist = [ "influxdb"];
+    var container_namelist = ["influxdb"];
     angular.module('myModule', [])
         .controller('myController', function ($scope, $http) {
             chart_cpu = Highcharts.chart('cpugraph',
@@ -20,9 +20,7 @@
                     chart: {
                         type: 'spline',
                         zoomType: 'x',
-                        events: {
-                            //load: requestData('chart_cpu', 'cpu', container_namelist) // 图表加载完毕后执行的回调函数
-                        }
+
                     },
                     title: {
                         text: 'Average cpu'
@@ -51,9 +49,7 @@
                     chart: {
                         type: 'spline',
                         zoomType: 'x',
-                        events: {
-                            //load: requestData('chart_mem', 'memory_usage',container_namelist) // 图表加载完毕后执行的回调函数
-                        }
+
                     },
                     title: {
                         text: 'Average memory'
@@ -82,9 +78,7 @@
                     chart: {
                         type: 'spline',
                         zoomType: 'x',
-                        events: {
-                            //load: requestData('net_in', 'rx_bytes',container_namelist) // 图表加载完毕后执行的回调函数
-                        }
+
                     },
                     title: {
                         text: 'net in '
@@ -158,37 +152,36 @@
                         'container_namelist': container_namelist
                     }
                 }).success(function (response, status, headers, config) {
-                    var  whichchart = null;
-                    for (var datatype in response)
-                    {
-                        if(datatype==="tx_bytes"){
+                    var whichchart = null;
+                    for (var datatype in response) {
+                        if (datatype === "tx_bytes") {
                             whichchart = net_out;
-                        }else if(datatype==="rx_bytes"){
+                        } else if (datatype === "rx_bytes") {
                             whichchart = net_in;
-                        }else if(datatype==="memory_usage"){
+                        } else if (datatype === "memory_usage") {
                             whichchart = chart_mem;
-                        }else if(datatype==="cpudata"){
+                        } else if (datatype === "cpudata") {
                             whichchart = chart_cpu;
                         }
                         var index = 0;
                         for (var container_name in response[datatype]) {
                             whichchart.addSeries({
-                            name: container_name,
-                            data:[]
-                        });
+                                name: container_name,
+                                data: []
+                            });
                             var container_data = response[datatype][container_name];
-                        for (var i = 0; i < container_data.length; i++) {
-                            var x = Date.parse(container_data[i].time);
-                            x = x + 28800000;
-                            var y = parseFloat(container_data[i].value);
-                            whichchart.series[index].addPoint([x, y], false, false);
+                            for (var i = 0; i < container_data.length; i++) {
+                                var x = Date.parse(container_data[i].time);
+                                x = x + 28800000;
+                                var y = parseFloat(container_data[i].value);
+                                whichchart.series[index].addPoint([x, y], false, false);
+                            }
+
+                            index = index + 1;
+
                         }
 
-                        index = index + 1;
-
-                        }
-
-                    whichchart.redraw();
+                        whichchart.redraw();
                     }
                     setTimeout(updatedata, 1500, container_namelist);
 
@@ -205,17 +198,16 @@
                         'container_namelist': container_namelist
                     }
                 }).success(function (response, status, headers, config) {
-                    var  whichchart = null;
+                    var whichchart = null;
                     console.log(response);
-                    for (var datatype in response)
-                    {
-                        if(datatype==="tx_bytes"){
+                    for (var datatype in response) {
+                        if (datatype === "tx_bytes") {
                             whichchart = net_out;
-                        }else if(datatype==="rx_bytes"){
+                        } else if (datatype === "rx_bytes") {
                             whichchart = net_in;
-                        }else if(datatype==="memory_usage"){
+                        } else if (datatype === "memory_usage") {
                             whichchart = chart_mem;
-                        }else if(datatype==="cpudata"){
+                        } else if (datatype === "cpudata") {
                             whichchart = chart_cpu;
                         }
                         var index = 0;
@@ -227,18 +219,15 @@
                             var y = parseFloat(container_data.value);
                             whichchart.series[index].addPoint([x, y], false, true);
 
-                        index = index + 1;
+                            index = index + 1;
 
                         }
 
-                    whichchart.redraw();
+                        whichchart.redraw();
                     }
 
 
-
-
-
-                    setTimeout(updatedata, 1500,  container_namelist);
+                    setTimeout(updatedata, 1500, container_namelist);
 
 
                 }).error(function (result) {

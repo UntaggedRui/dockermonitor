@@ -19,6 +19,5 @@ from my_app import views
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'getdata/',views.getalldata),
-    url(r'old/', views.old),
     url(r'^$', views.index),
 ]
