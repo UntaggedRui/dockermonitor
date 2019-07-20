@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html ng-app="myModule">
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.5/angular.min.js"></script>
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+</head>
+<body ng-controller="myController">
+<div id="cpugraph">Placeholder for cpugraph</div>
+<div id="memorygraph">Placeholder for memorygraph</div>
+<script>
+    var chart_cpu = null,chart_mem=null,net_in=null,net_out=null;
+    var container_list = ["cadvisor", "influxdb"];
+    angular.module('myModule', [])
+        .controller('myController', function ($scope, $http) {
+            chart_cpu = Highcharts.chart('cpugraph',
+                {
+
+                    chart: {
+                        type: 'spline',
+                        zoomType: 'x',
+                        events: {
+                            load: requestData('chart_cpu','cpu') // 图表加载完毕后执行的回调函数
+                        }
+                    },
+                    title: {
+                        text: 'Average cpu'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+//      tickPixelInterval: 150,
+//      maxZoom: 20 * 1000
+                    },
+                    yAxis: {
+                        minPadding: 0.2,
+                        maxPadding: 0.2,
+                        title: {
+                            text: 'percent',
+                            margin: 80
+                        }
+                    },
+                    credits: {
+                        enabled: false // 禁用版权信息
+                    },
+                    series: [{
+                        metric: 'cpu percent',
+                        data: []
+                    }]
+                }
+            );
+            chart_mem = Highcharts.chart('memorygraph',
+                {
+
+                    chart: {
+                        type: 'spline',
+                        zoomType: 'x',
+                        events: {
+                            load: requestData('chart_mem', 'memory_usage') // 图表加载完毕后执行的回调函数
+                        }
+                    },
+                    title: {
+                        text: 'Average memory'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+//      tickPixelInterval: 150,
+//      maxZoom: 20 * 1000
+                    },
+                    yAxis: {
+                        minPadding: 0.2,
+                        maxPadding: 0.2,
+                        title: {
+                            text: 'memory use info',
+                            margin: 80
+                        }
+                    },
+                    credits: {
+                        enabled: false // 禁用版权信息
+                    },
+                    series: [{
+                        metric: 'cpu percent',
+                        data: []
+                    }]
+                }
+            );
+
+            function sleep(numberMillis) {
+                var now = new Date();
+                var exitTime = now.getTime() + numberMillis;
+                while (true) {
+                    now = new Date();
+                    if (now.getTime() > exitTime)
+                        return;
+                }
+            }
+
+            function requestData(chart_name, infotype) {
+                $http({
+                    url: 'getdata/',
+                    method: 'GET',
+                    params: {
+                        'firsttime': 'true',
+                        'infotype': infotype,
+                        'container_name': 'cadvisor'
+                    }
+                }).success(function (response, status, headers, config) {
+                    for (var i = 0; i < response.length; i++) {
+                        var x = Date.parse(response[i].time);
+                        x = x + 28800000;
+                        var y = parseFloat(response[i].value);
+                        if (chart_name === "chart_cpu"){
+                            chart_cpu.series[0].addPoint([x, y], false, false);
+                        }else if (chart_name === "chart_mem"){
+                            chart_mem.series[0].addPoint([x, y], false, false);
+                        }
+                    }
+                    if (chart_name === "chart_cpu"){
+                            chart_cpu.redraw();
+                        }else if (chart_name === "chart_mem"){
+                            chart_mem.redraw();
+                        }
+                    setTimeout(updatedata, 1500,chart_name, infotype);
+
+
+                })
+            }
+
+            function updatedata(chart_name, infotype) {
+                $http({
+                    url: 'getdata/',
+                    method: 'GET',
+                    params: {
+                        'firsttime': 'false',
+                        'infotype': infotype,
+                        'container_name': 'cadvisor'
+                    }
+                }).success(function (response, status, headers, config) {
+                    {#insertdata(response,0);#}
+                    var x = Date.parse(response.time);
+                    x = x + 28800000;
+                    var y = parseFloat(response.value);
+                    if (chart_name === "chart_cpu"){
+                            chart_cpu.series[0].addPoint([x, y], true, true);
+                        }else if (chart_name === "chart_mem"){
+                            console.log([x,y]);
+                            chart_mem.series[0].addPoint([x, y], true, true);
+                        }
+                    setTimeout(updatedata, 2000,chart_name, infotype);
+
+
+                }).error(function (result) {
+                    console.log("nimabi")
+                })
+            }
+
+
+        });
+</script>
+</body>
+</html>
