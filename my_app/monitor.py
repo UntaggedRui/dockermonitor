@@ -26,7 +26,7 @@ def getmemory(client,container_name,resourcename):
     return results
 
 def getmemory2(client,container_name,resourcename,shifttime):
-    sys_time1 = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(time.time() - shifttime - 5))
+    sys_time1 = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(time.time() - shifttime - 3))
     sys_time2 = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.localtime(time.time() - shifttime))
     sql = "select mean(value) from {} where container_name = '{}' and time > '{}' and time < '{}'".format(resourcename,
                                                                                                 container_name,
@@ -72,7 +72,9 @@ def getcpu(client,container_name,shifttime):
 
 if __name__ == '__main__':
     client = getclient()
-    getmemory2(client,'cadvisor','memory_usage',60)
+    while True:
+        time.sleep(1)
+        print getmemory2(client,'cadvisor','memory_usage',60)
     # a = getmemory(client, 'cadvisor', 'memory_usage')
 
     # while True:

@@ -7,9 +7,11 @@
 <body ng-controller="myController">
 <div id="cpugraph">Placeholder for cpugraph</div>
 <div id="memorygraph">Placeholder for memorygraph</div>
+<div id="rx_bytes">Placeholder for rx_bytes</div>
+<div id="tx_bytes">Placeholder for tx_bytes</div>
 <script>
-    var chart_cpu = null,chart_mem=null,net_in=null,net_out=null;
-    var container_list = ["cadvisor", "influxdb"];
+    var chart_cpu = null, chart_mem = null, net_in = null, net_out = null;
+    var container_namelist = ["cadvisor", "influxdb"];
     angular.module('myModule', [])
         .controller('myController', function ($scope, $http) {
             chart_cpu = Highcharts.chart('cpugraph',
@@ -19,7 +21,7 @@
                         type: 'spline',
                         zoomType: 'x',
                         events: {
-                            load: requestData('chart_cpu','cpu') // 图表加载完毕后执行的回调函数
+                            load: requestData('chart_cpu', 'cpu', container_namelist) // 图表加载完毕后执行的回调函数
                         }
                     },
                     title: {
@@ -41,10 +43,6 @@
                     credits: {
                         enabled: false // 禁用版权信息
                     },
-                    series: [{
-                        metric: 'cpu percent',
-                        data: []
-                    }]
                 }
             );
             chart_mem = Highcharts.chart('memorygraph',
@@ -54,7 +52,7 @@
                         type: 'spline',
                         zoomType: 'x',
                         events: {
-                            load: requestData('chart_mem', 'memory_usage') // 图表加载完毕后执行的回调函数
+                            load: requestData('chart_mem', 'memory_usage',container_namelist) // 图表加载完毕后执行的回调函数
                         }
                     },
                     title: {
@@ -69,19 +67,77 @@
                         minPadding: 0.2,
                         maxPadding: 0.2,
                         title: {
-                            text: 'memory use info',
+                            text: 'memory use /MB',
                             margin: 80
                         }
                     },
                     credits: {
                         enabled: false // 禁用版权信息
                     },
-                    series: [{
-                        metric: 'cpu percent',
-                        data: []
-                    }]
                 }
             );
+           {% comment %} net_in = Highcharts.chart('rx_bytes',
+                {
+
+                    chart: {
+                        type: 'spline',
+                        zoomType: 'x',
+                        events: {
+                            load: requestData('net_in', 'rx_bytes',container_namelist) // 图表加载完毕后执行的回调函数
+                        }
+                    },
+                    title: {
+                        text: 'net in '
+                    },
+                    xAxis: {
+                        type: 'datetime',
+//      tickPixelInterval: 150,
+//      maxZoom: 20 * 1000
+                    },
+                    yAxis: {
+                        minPadding: 0.2,
+                        maxPadding: 0.2,
+                        title: {
+                            text: 'net in  /MB',
+                            margin: 80
+                        }
+                    },
+                    credits: {
+                        enabled: false // 禁用版权信息
+                    },
+                }
+            );
+            net_out = Highcharts.chart('tx_bytes',
+                {
+
+                    chart: {
+                        type: 'spline',
+                        zoomType: 'x',
+                        events: {
+                            load: requestData('net_out', 'tx_bytes',container_namelist) // 图表加载完毕后执行的回调函数
+                        }
+                    },
+                    title: {
+                        text: 'net out'
+                    },
+                    xAxis: {
+                        type: 'datetime',
+//      tickPixelInterval: 150,
+//      maxZoom: 20 * 1000
+                    },
+                    yAxis: {
+                        minPadding: 0.2,
+                        maxPadding: 0.2,
+                        title: {
+                            text: 'net out /MB',
+                            margin: 80
+                        }
+                    },
+                    credits: {
+                        enabled: false // 禁用版权信息
+                    },
+                }
+            );{% endcomment %}
 
             function sleep(numberMillis) {
                 var now = new Date();
@@ -93,58 +149,86 @@
                 }
             }
 
-            function requestData(chart_name, infotype) {
+            function requestData(chart_name, infotype, container_namelist) {
                 $http({
                     url: 'getdata/',
-                    method: 'GET',
-                    params: {
+                    method: 'POST',
+                    data: {
                         'firsttime': 'true',
                         'infotype': infotype,
-                        'container_name': 'cadvisor'
+                        'container_namelist': container_namelist
                     }
                 }).success(function (response, status, headers, config) {
-                    for (var i = 0; i < response.length; i++) {
-                        var x = Date.parse(response[i].time);
-                        x = x + 28800000;
-                        var y = parseFloat(response[i].value);
-                        if (chart_name === "chart_cpu"){
-                            chart_cpu.series[0].addPoint([x, y], false, false);
-                        }else if (chart_name === "chart_mem"){
-                            chart_mem.series[0].addPoint([x, y], false, false);
+                    var index = 0;
+                    for (var container_name in response) {
+                        if (chart_name === "chart_cpu") {
+                                chart_cpu.addSeries({
+                            name: container_name,
+                            data:[]
+                        });
+                            } else if (chart_name === "chart_mem") {
+                                chart_mem.addSeries({
+                            name: container_name,
+                            data:[]
+                        });
+                            }
+
+                        var container_data = response[container_name];
+                        for (var i = 0; i < container_data.length; i++) {
+                            var x = Date.parse(container_data[i].time);
+                            x = x + 28800000;
+                            var y = parseFloat(container_data[i].value);
+                            if (chart_name === "chart_cpu") {
+                                chart_cpu.series[index].addPoint([x, y], false, false);
+                            } else if (chart_name === "chart_mem") {
+                                chart_mem.series[index].addPoint([x, y], false, false);
+                            }
                         }
+
+                        index = index + 1;
                     }
-                    if (chart_name === "chart_cpu"){
-                            chart_cpu.redraw();
-                        }else if (chart_name === "chart_mem"){
-                            chart_mem.redraw();
-                        }
-                    setTimeout(updatedata, 1500,chart_name, infotype);
+                    if (chart_name === "chart_cpu") {
+                        chart_cpu.redraw();
+                    } else if (chart_name === "chart_mem") {
+                        chart_mem.redraw();
+                    }
+
+                    setTimeout(updatedata, 1500, chart_name, infotype, container_namelist);
 
 
                 })
             }
 
-            function updatedata(chart_name, infotype) {
+            function updatedata(chart_name, infotype, container_namelist) {
                 $http({
                     url: 'getdata/',
-                    method: 'GET',
-                    params: {
+                    method: 'POST',
+                    data: {
                         'firsttime': 'false',
                         'infotype': infotype,
-                        'container_name': 'cadvisor'
+                        'container_namelist': container_namelist
                     }
                 }).success(function (response, status, headers, config) {
-                    {#insertdata(response,0);#}
-                    var x = Date.parse(response.time);
-                    x = x + 28800000;
-                    var y = parseFloat(response.value);
-                    if (chart_name === "chart_cpu"){
-                            chart_cpu.series[0].addPoint([x, y], true, true);
-                        }else if (chart_name === "chart_mem"){
-                            console.log([x,y]);
-                            chart_mem.series[0].addPoint([x, y], true, true);
+                    var index = 0;
+                    for (var container_name in response) {
+                        var container_data = response[container_name];
+                        var x = Date.parse(container_data.time);
+                        x = x + 28800000;
+                        var y = parseFloat(container_data.value);
+                        if (chart_name === "chart_cpu") {
+                            chart_cpu.series[index].addPoint([x, y], false, true);
+                        } else if (chart_name === "chart_mem") {
+                            chart_mem.series[index].addPoint([x, y], false, true);
                         }
-                    setTimeout(updatedata, 2000,chart_name, infotype);
+                        index = index + 1;
+                    }
+                    if (chart_name === "chart_cpu") {
+                        chart_cpu.redraw();
+                    } else if (chart_name === "chart_mem") {
+                        chart_mem.redraw();
+                    }
+
+                    setTimeout(updatedata, 1500, chart_name, infotype, container_namelist);
 
 
                 }).error(function (result) {

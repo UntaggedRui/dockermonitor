@@ -37,39 +37,54 @@ def old(request):
 #             return HttpResponse(json.dumps(data, ensure_ascii=False),
 #                                 content_type="application/json,charset=utf-8")
 
-def getotherdata(request, container_name, infotype):
-    isfirst = request.GET.get("firsttime", "false")
+def getotherdata(request, container_namelist, infotype,isfirst):
     if isfirst=="true":
-        data = []
-        shifttime = 90
-        for i in range(30):
-            onedata = monitor.getmemory2(client, container_name, infotype,shifttime)
-            shifttime = shifttime - 1
-            data.append(onedata)
-        return HttpResponse(json.dumps(data, ensure_ascii=False), content_type="application/json,charset=utf-8")
+        alldata = {}
+        for container_name in container_namelist:
+            data = []
+            shifttime = 90
+            for i in range(30):
+                onedata = monitor.getmemory2(client, container_name, infotype, shifttime)
+                shifttime = shifttime - 1
+                data.append(onedata)
+            alldata[container_name] = data
+        return HttpResponse(json.dumps(alldata, ensure_ascii=False), content_type="application/json,charset=utf-8")
     else:
-        data = monitor.getmemory2(client, container_name, infotype, 60)
-        return HttpResponse(json.dumps(data, ensure_ascii=False), content_type="application/json,charset=utf-8")
+        alldata = {}
+        for container_name in container_namelist:
+            data = monitor.getmemory2(client, container_name, infotype, 60)
+            alldata[container_name] = data
+        return HttpResponse(json.dumps(alldata, ensure_ascii=False), content_type="application/json,charset=utf-8")
 
 
 
 def getdata(request):
-    isfirst = request.GET.get("firsttime", "false")
-    infotype = request.GET.get("infotype", "cpu")
-    container_name = request.GET.get("container_name", "cadvisor")
+    postBody = request.body
+    post_data = json.loads(postBody)
+    isfirst = post_data.get("firsttime", "false")
+    infotype = post_data.get("infotype", "cpu")
+    container_namelist = post_data.get("container_namelist", "cadvisor")
+    # container_namelist = [str(i) for i in container_namelist]
     if infotype == "cpu":
         if isfirst == "true":
-            data = []
-            shifttime = 90
-            for i in range(30):
-                onedata = monitor.getcpu(client, 'cadvisor',  shifttime )
-                shifttime = shifttime - 1
-                data.append(onedata)
-            return HttpResponse(json.dumps(data, ensure_ascii=False), content_type="application/json,charset=utf-8")
-        data = monitor.getcpu(client, 'cadvisor', 60)
-        return HttpResponse(json.dumps(data, ensure_ascii=False), content_type="application/json,charset=utf-8")
+            alldata = {}
+            for container_name in container_namelist:
+                data = []
+                shifttime = 90
+                for i in range(30):
+                    onedata = monitor.getcpu(client, container_name,  shifttime )
+                    shifttime = shifttime - 1
+                    data.append(onedata)
+                alldata[container_name] = data
+            return HttpResponse(json.dumps(alldata, ensure_ascii=False), content_type="application/json,charset=utf-8")
+        else:
+            alldata = {}
+            for container_name in container_namelist:
+                data = monitor.getcpu(client, container_name, 60)
+                alldata[container_name] = data
+            return HttpResponse(json.dumps(alldata, ensure_ascii=False), content_type="application/json,charset=utf-8")
     else:
-        return getotherdata(request, container_name, infotype)
+        return getotherdata(request, container_namelist, infotype,isfirst)
 
 
 
